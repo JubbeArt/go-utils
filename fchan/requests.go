@@ -4,13 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"net/http"
+	"strings"
 )
 
 type Post struct {
 	Board  string
 	Number int64 `json:"no"`
 
+	Subject string `json:"sub"`
 	Comment string `json:"com"`
 	Name    string `json:"name"`
 
@@ -19,12 +22,6 @@ type Post struct {
 
 	FileName  string `json:"filename"`
 	Extension string `json:"ext"`
-}
-
-type Thread struct {
-	*Post
-
-	Subject string `json:"sub"`
 
 	Replies int `json:"replies"`
 	Images  int `json:"images"`
@@ -46,27 +43,34 @@ func (p *Post) ThumbnailUrl() string {
 	return fmt.Sprintf("https://i.4cdn.org/%v/%vs.jpg", p.Board, p.TimeInMilli)
 }
 
-func GetThread(board string, number int64) ([]Post, error) {
-	posts := make([]Post, 0)
+func Thread(board string, number int64) ([]Post, error) {
+	var threadJSON struct {
+		Posts []Post `json:"posts"`
+	}
 
-	err := getJson(fmt.Sprintf("https://a.4cdn.org/%v/thread/%v.json", board, number), &posts)
+	err := getJson(fmt.Sprintf("https://a.4cdn.org/%v/thread/%v.json", board, number), &threadJSON)
 
 	if err != nil {
 		return nil, err
 	}
 
+	posts := threadJSON.Posts
+
 	for i := range posts {
 		posts[i].Board = board
+		posts[i].Subject = cleanString(posts[i].Subject)
+		posts[i].Comment = cleanString(posts[i].Comment)
+
 	}
 
 	return posts, nil
 }
 
-func Catalog(board string) ([]Thread, error) {
-	threads := make([]Thread, 0)
+func Catalog(board string) ([]Post, error) {
+	threads := make([]Post, 0)
 
 	type Page struct {
-		Threads []Thread `json:"threads"`
+		Threads []Post `json:"threads"`
 	}
 
 	var pages []Page
@@ -83,6 +87,8 @@ func Catalog(board string) ([]Thread, error) {
 
 	for i := range threads {
 		threads[i].Board = board
+		threads[i].Subject = cleanString(threads[i].Subject)
+		threads[i].Comment = cleanString(threads[i].Comment)
 	}
 
 	return threads, nil
@@ -107,4 +113,15 @@ func getJson(url string, target interface{}) error {
 	}
 
 	return nil
+}
+
+func cleanString(text string) string {
+	text = html.UnescapeString(text)
+	text = strings.ToLower(text)
+	text = strings.ReplaceAll(text, "\n", " ")
+	text = strings.ReplaceAll(text, "<br>", " ")
+	text = strings.ReplaceAll(text, "<wbr>", "")
+	text = strings.ReplaceAll(text, "<span class=\"quote\">", "")
+	text = strings.ReplaceAll(text, "</span>", "")
+	return text
 }

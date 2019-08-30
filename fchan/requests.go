@@ -17,14 +17,25 @@ type Post struct {
 	Comment string `json:"com"`
 	Name    string `json:"name"`
 
-	Time        int64 `json:"time"`
-	TimeInMilli int64 `json:"tim"`
+	Time      int64 `json:"time"`
+	TimeMilli int64 `json:"tim"`
 
 	FileName  string `json:"filename"`
 	Extension string `json:"ext"`
+	MD5       string `json:"md5"`
 
 	Replies int `json:"replies"`
 	Images  int `json:"images"`
+}
+
+func (p *Post) Text() string {
+	if p.Subject == "" {
+		return p.Comment
+	} else if p.Comment == "" {
+		return p.Subject
+	}
+
+	return p.Subject + " " + p.Comment
 }
 
 func (p *Post) FullFileName() string {
@@ -36,11 +47,11 @@ func (p *Post) HasImage() bool {
 }
 
 func (p *Post) ImageUrl() string {
-	return fmt.Sprintf("https://i.4cdn.org/%v/%v%v", p.Board, p.TimeInMilli, p.Extension)
+	return fmt.Sprintf("https://i.4cdn.org/%v/%v%v", p.Board, p.TimeMilli, p.Extension)
 }
 
 func (p *Post) ThumbnailUrl() string {
-	return fmt.Sprintf("https://i.4cdn.org/%v/%vs.jpg", p.Board, p.TimeInMilli)
+	return fmt.Sprintf("https://i.4cdn.org/%v/%vs.jpg", p.Board, p.TimeMilli)
 }
 
 func Thread(board string, number int64) ([]Post, error) {

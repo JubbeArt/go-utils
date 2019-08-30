@@ -51,7 +51,7 @@ func (db *DB) Table(table string) *Table {
 	}
 }
 
-func (t *Table) Insert(values []interface{}) error {
+func (t *Table) Insert(values ...interface{}) error {
 	if len(values) == 0 {
 		panic("no values to insert into table " + t.table)
 	}
@@ -62,13 +62,13 @@ func (t *Table) Insert(values []interface{}) error {
 	valuesStr = valuesStr[:len(valuesStr)-1]
 	query := fmt.Sprintf("INSERT OR IGNORE INTO %v (%v) VALUES (%v)", t.table, attrs, valuesStr)
 
-	_, err := t.db.instance.Exec(query, values)
+	_, err := t.db.instance.Exec(query, values...)
 	return err
 }
 
-func (t *Table) Remove(condition string, values ...string) error {
-	query := fmt.Sprintf("REMOVE FROM %v WHERE %v", t.table, condition)
-	_, err := t.db.instance.Exec(query, values)
+func (t *Table) Delete(condition string, values ...interface{}) error {
+	query := fmt.Sprintf("DELETE FROM %v WHERE %v", t.table, condition)
+	_, err := t.db.instance.Exec(query, values...)
 	return err
 }
 
@@ -77,9 +77,9 @@ func (t *Table) Attrs(attributes ...string) *Table {
 	return t
 }
 
-func (t *Table) HasRow(condition string, values ...string) bool {
+func (t *Table) HasRow(condition string, values ...interface{}) bool {
 	query := fmt.Sprintf("SELECT COUNT(*) FROM %v WHERE %v", t.table, condition)
-	row := *t.db.instance.QueryRow(query, values)
+	row := *t.db.instance.QueryRow(query, values...)
 	var count int
 	err := row.Scan(&count)
 
@@ -90,15 +90,19 @@ func (t *Table) HasRow(condition string, values ...string) bool {
 	return count != 0
 }
 
-func (t *Table) Rows(callback func(scan func(...interface{}) error), condition string, values ...string) error {
+func (t *Table) Rows(scan func(func(...interface{})), condition string, values ...interface{}) error {
 	selectValues := "*"
 
 	if t.attributes != nil {
 		selectValues = strings.Join(t.attributes, ",")
 	}
 
-	query := fmt.Sprintf("SELECT %v FROM %v WHERE %v", t.table, selectValues, condition)
-	rows, err := t.db.instance.Query(query, values)
+	if condition == "" {
+		condition = "1 = 1"
+	}
+
+	query := fmt.Sprintf("SELECT %v FROM %v WHERE %v", selectValues, t.table, condition)
+	rows, err := t.db.instance.Query(query, values...)
 
 	if err != nil {
 		return err
@@ -107,7 +111,14 @@ func (t *Table) Rows(callback func(scan func(...interface{}) error), condition s
 	defer rows.Close()
 
 	for rows.Next() {
-		callback(rows.Scan)
+		scan(func(values ...interface{}) {
+			err = rows.Scan(values...)
+		})
+
+		if err != nil {
+			return err
+		}
+
 	}
 
 	return nil

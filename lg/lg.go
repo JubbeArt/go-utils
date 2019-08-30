@@ -1,4 +1,4 @@
-package log
+package lg
 
 import (
 	"log"
@@ -13,21 +13,22 @@ var Log *log.Logger
 var Err *log.Logger
 
 func Init(logFolder string) error {
-	err := os.MkdirAll(logFolder, 0644)
+	err := os.MkdirAll(logFolder, 0755)
 
 	if err != nil {
 		return err
 	}
 
-	logFile, err = os.OpenFile(filepath.Join(logFolder, "log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	logFile, err = os.OpenFile(filepath.Join(logFolder, "log"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 
 	if err != nil {
 		return err
 	}
 
-	errorFile, err = os.OpenFile(filepath.Join(logFolder, "error"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	errorFile, err = os.OpenFile(filepath.Join(logFolder, "error"), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 
 	if err != nil {
+		logFile.Close()
 		return err
 	}
 

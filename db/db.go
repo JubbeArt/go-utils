@@ -43,11 +43,11 @@ type Table struct {
 	attributes []string
 }
 
-func (db *DB) Table(table string) *Table {
+func (db *DB) Table(table string, attributes ...string) *Table {
 	return &Table{
 		db:         db,
 		table:      table,
-		attributes: nil,
+		attributes: attributes,
 	}
 }
 
@@ -70,11 +70,6 @@ func (t *Table) Delete(condition string, values ...interface{}) error {
 	query := fmt.Sprintf("DELETE FROM %v WHERE %v", t.table, condition)
 	_, err := t.db.instance.Exec(query, values...)
 	return err
-}
-
-func (t *Table) Attrs(attributes ...string) *Table {
-	t.attributes = attributes
-	return t
 }
 
 func (t *Table) HasRow(condition string, values ...interface{}) bool {

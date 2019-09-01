@@ -11,6 +11,10 @@ func Files(folder string) []string {
 	fileObjects, _ := ioutil.ReadDir(folder)
 
 	for _, fileInfo := range fileObjects {
+		if fileInfo.IsDir() {
+			continue
+		}
+
 		files = append(files, filepath.Join(folder, fileInfo.Name()))
 	}
 
